@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      templuate_generator|templuate_annotations:
+        enabled: true
+
+builders:
+  templuate_generator:
+    target: ":templuate_generator"
+    import: "package:templuate_generator/templuate_generator.dart"
+    builder_factories: ["helperParametersGenerator"] #Builder name(BuilderOptions)
+    build_extensions: { ".dart": [".g.part"] }
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
