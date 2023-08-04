@@ -1,3 +1,3 @@
-import 'package:templuate/nodes.dart';
+import 'package:templuate/src/nodes/node.dart';
 
-class ElseNode extends WidgetTemplateNode {}
+class ElseNode extends KeywordNode {}

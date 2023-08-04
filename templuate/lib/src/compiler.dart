@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:templuate/src/nodes/else.dart';
 import 'package:templuate/src/parser2.dart';
-import 'package:templuate/src/templated_widget.dart';
+import 'package:templuate/src/template/templated_widget.dart';
+import 'package:templuate/src/template/template_definition.dart';
 import 'package:templuate/src/nodes/helpers.dart';
-import 'package:templuate/src/nodes/renderable.dart';
 
 import 'expressions/arguments/bracket_argument.dart';
 import 'expressions/arguments/identifier.dart';
@@ -18,6 +18,7 @@ import 'helpers.dart';
 import 'nodes/conditional.dart';
 import 'nodes/each.dart';
 import 'nodes/evaluable.dart';
+import 'nodes/node.dart';
 import 'nodes/text.dart';
 import 'variables.dart';
 
@@ -198,14 +199,17 @@ class NestedHelperFn<T> implements EvaluableArgument<T> {
   NestedHelperFnArg toBracketArgument() {
     return bracketArgument;
   }
+  
+  @override
+  Type get evaluatedType => T;
 }
 
-abstract class WidgetHelperNode<T> extends RenderableNode<T> {
+abstract class WidgetHelperNode<T> extends WidgetTemplateNode {
   const WidgetHelperNode();
 
   @override
-  Widget getWidget(WidgetTemplateVariablesContext variablesContext) {
-    return widgetBuilder(variablesContext);
+  Widget eval(WidgetTemplateVariablesContext context) {
+    return widgetBuilder(context);
   }
 
   WidgetBuilderHelperFn get widgetBuilder;
@@ -257,11 +261,11 @@ abstract class WidgetBlockHelperWithChildren<T> extends WidgetBlockHelper<T, Ren
   }
 }
 
-abstract class WidgetBlockHelperOneChildWidget<T> extends WidgetBlockHelper<T, RenderableNode> {
+abstract class WidgetBlockHelperOneChildWidget<T> extends WidgetBlockHelper<T, WidgetTemplateNode> {
   const WidgetBlockHelperOneChildWidget(super.name, super.widgetBlockHelperFn);
 
   @override
-  RenderableNode getContent(NodeContentEvaluator contentEvaluator) {
+  WidgetTemplateNode getContent(NodeContentEvaluator contentEvaluator) {
     return contentEvaluator.asOneWidget();
   }
 }
@@ -286,17 +290,17 @@ abstract class WidgetInlineHelper<T> extends WidgetHelper<WidgetInlineHelperFunc
 
 @immutable
 class NodeContentEvaluator {
-  final List<WidgetTemplateNode> content;
+  final List<TemplateNode> content;
 
   const NodeContentEvaluator(this.content);
 
-  RenderableNode asOneWidget() {
+  WidgetTemplateNode asOneWidget() {
     if(content.isEmpty || content.length > 1) {
-      throw Exception('One node is expected here. It is expected to be a $RenderableNode.');
+      throw Exception('One node is expected here. It is expected to be a $WidgetTemplateNode.');
     }
     final single = content.first;
-    if(single is! RenderableNode) {
-      throw Exception('$single is not a $RenderableNode');
+    if(single is! WidgetTemplateNode) {
+      throw Exception('$single is not a $WidgetTemplateNode');
     }
     return single;
   }
@@ -305,8 +309,9 @@ class NodeContentEvaluator {
     return renderAll(content, variablesContext);
   }
 
-  EvaluableNodeList asEvaluableNodeList() {
-    return makeNodeListEvaluable(content);
+  Evaluable<List<EvaluableNode>> asEvaluableNodeList() {
+    final evaluableNodeList = content.whereType<EvaluableNode>().toList();
+    return makeNodeListEvaluable(evaluableNodeList);
   }
 }
 
@@ -321,11 +326,11 @@ class WidgetHelperBuilder {
 
   const WidgetHelperBuilder(this.arguments, this.contentEvaluator, this.builderHelperFn);
 
-  EvaluableNodeList get evaluableNodeList => contentEvaluator.asEvaluableNodeList();
+  Evaluable<List<EvaluableNode>> get evaluableNodeList => contentEvaluator.asEvaluableNodeList();
 }
 
 @immutable
-class WidgetBlockHelperFunction extends WidgetHelperNode<List<WidgetTemplateNode>> with ChildNodes {
+class WidgetBlockHelperFunction extends WidgetHelperNode<List<WidgetTemplateNode>> {
   // final HelperParameters arguments;
   final NodeContentEvaluator contentEvaluator;
   @override
@@ -336,12 +341,9 @@ class WidgetBlockHelperFunction extends WidgetHelperNode<List<WidgetTemplateNode
     this.contentEvaluator,
     this.widgetBuilder,
   );
-  
-  @override
-  EvaluableNodeList get nodeList => contentEvaluator.asEvaluableNodeList();
 }
 
-class WidgetInlineHelperFunction extends WidgetHelperNode with NoChildNodes {
+class WidgetInlineHelperFunction extends WidgetHelperNode {
   // final HelperParameters arguments;
   @override
   final WidgetBuilderHelperFn widgetBuilder;
@@ -370,7 +372,7 @@ class WidgetTemplateCompiler {
     _customHelpers[widgetHelper.name] = (args, children) {
       return widgetHelper.useArgs(
         args,
-        NodeContentEvaluator(link(children ?? []))
+        NodeContentEvaluator(_link(children ?? []))
       );
     };
   }
@@ -379,16 +381,19 @@ class WidgetTemplateCompiler {
     _customNestedHelpers[name] = NestedHelper<T>(nestedHelperFn);
   }
 
-  LinkedTemplate linkTemplateDefinition(WidgetTemplateDefinition templateDefinition) {
-    final linkedTemplate = LinkedTemplate(templateDefinition, link(templateDefinition.validatedExpressions));
+  /// Filters out all linked [TemplateNode]s that do not have [TemplateNode.enclosedType] of [Evaluable]<[Widget]>.
+  TemplatedWidgetBuilder linkTemplateDefinition(TemplateDefinition templateDefinition) {
+    final linkedTemplate = _link(templateDefinition.validatedExpressions);
     debugPrint('Linked template successfully: $templateDefinition');
-    return linkedTemplate;
+    return (templateData) => TemplatedWidget(
+      layoutData: templateData, templateNodes: linkedTemplate.whereType<WidgetTemplateNode>().toList()
+    );
   }
 
-  /// Links each [ValidatedExpression] to its matching [WidgetTemplateNode].
-  List<WidgetTemplateNode> link(
+  /// Links each [ValidatedExpression] to its matching [TemplateNode].
+  List<TemplateNode> _link(
       List<ValidatedExpression> validatedExpressions) {
-    var nodes = <WidgetTemplateNode>[];
+    var nodes = <TemplateNode>[];
     for (var expression in validatedExpressions) {
       if (expression is InlineBracket) {
         if (expression is InlineLiteral) {
@@ -430,7 +435,7 @@ class WidgetTemplateCompiler {
     return nodes;
   }
 
-  WidgetTemplateNode findHelper(HelperFunction helperFunction,
+  TemplateNode findHelper(HelperFunction helperFunction,
       [List<ValidatedExpression>? children]) {
     final identifier = helperFunction.name;
     final params = HelperParameters._(helperFunction, this);
@@ -443,14 +448,14 @@ class WidgetTemplateCompiler {
             for(final namedArg in params.namedArgs)
               params.named(namedArg).as()
           ],
-          link(children ?? [])
+          _link(children ?? [])
         );
       case 'each':
         params.expectNotEmpty();
         final iterableIdentifier = params[0].asVariableRef();
         return EachNode(
             iterableRef: iterableIdentifier,
-            nodeList: makeNodeListEvaluable(link(children ?? [])));
+            nodeList: makeNodeListEvaluable(_link(children ?? []).whereType<EvaluableNode>().toList()));
       // TODO: Replace 'conditional' with 'if'
       case 'conditional':
         params.expectNotEmpty();
@@ -472,10 +477,10 @@ class WidgetTemplateCompiler {
                   'Custom nested helpers are not supported yet.');
           }
         }
-        final truthyList = <WidgetTemplateNode>[];
-        final falseyList = <WidgetTemplateNode>[];
+        final truthyList = <EvaluableNode>[];
+        final falseyList = <EvaluableNode>[];
         var afterElse = false;
-        final nodes = link(children ?? []);
+        final nodes = _link(children ?? []);
         for(final node in nodes) {
           if(node is ElseNode) {
             if(afterElse) {
@@ -483,6 +488,8 @@ class WidgetTemplateCompiler {
             }
             afterElse = true;
             continue;
+          } else if(node is! EvaluableNode) {
+            throw Exception('A node in `conditional` is not type of `$EvaluableNode`, its enclosed type is `${node.enclosedType}`.');
           }
           if(afterElse) {
             falseyList.add(node);
@@ -560,18 +567,15 @@ class WidgetTemplateCompiler {
 /// Evaluates everything, returns nothing.
 class VoidNode extends EvaluableNode {
   final List<EvaluableArgument> args;
-  final List<WidgetTemplateNode> children;
+  final List<TemplateNode> children;
   const VoidNode(this.args, this.children);
   
   @override
-  List<WidgetTemplateNode> eval(WidgetTemplateVariablesContext context) {
+  List<TemplateNode> eval(WidgetTemplateVariablesContext context) {
     for (var element in args) {
       element.eval(context);
     }
     evaluateAll(children, context);
     return [];
   }
-  
-  @override
-  EvaluableNodeList get nodeList => const WidgetTemplateNodeListConstant([]);
 }

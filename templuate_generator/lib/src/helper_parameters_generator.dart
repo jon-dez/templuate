@@ -1,8 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
-
-import 'helper_args.dart';
+import 'package:templuate_annotations/templuate_annotations.dart';
 import 'visitors/template_helper_visitor.dart';
 
 // TODO: Import package:templuate/evaluable.dart
@@ -24,7 +23,7 @@ class HelperParametersGenerator extends GeneratorForAnnotation<HelperArgs> {
       // capitalize(String str) => str[0].toUpperCase() + str.substring(1);
       final namedArgs = unnamedConstructor.namedArgs;
 
-      buffer.writeln('class $genClassName implements Evaluable<$className> {');
+      buffer.writeln('class $genClassName extends Evaluable<$className> {');
       
       
       genClassFields(buffer, posArgs, namedArgs);

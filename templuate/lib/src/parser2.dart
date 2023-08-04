@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:templuate/src/expressions/arguments/bracket_argument.dart';
-import 'package:templuate/src/expressions/arguments/identifier.dart';
-import 'package:templuate/src/expressions/arguments/literal.dart';
-import 'package:templuate/src/expressions/arguments/nested_helper.dart';
-import 'package:templuate/src/expressions/block.dart';
-import 'package:templuate/src/expressions/common/helper_function.dart';
 import 'package:templuate/src/expressions/expression.dart';
-import 'package:templuate/src/expressions/inlines.dart';
 import 'package:templuate/src/expressions/text.dart';
 import 'package:petitparser/petitparser.dart';
 
+import 'expressions/arguments/bracket_argument.dart';
+import 'expressions/arguments/identifier.dart';
+import 'expressions/arguments/literal.dart';
+import 'expressions/arguments/nested_helper.dart';
+import 'expressions/block.dart';
+import 'expressions/common/helper_function.dart';
+import 'expressions/inlines.dart';
 import 'grammer/mustache_grammer_definition.dart';
+import 'template/template_definition.dart';
 
 class HelperFunctionOrVariable {
   final IdentifierArg identifierArg;
@@ -38,8 +39,8 @@ class InlineHelperOrVariable extends InlineBracket {
 class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
 
   @override
-  Parser<List<ValidatedExpression>> start() {
-    return super.start().map((value) => value as List<ValidatedExpression>);
+  Parser<TemplateDefinition> start() {
+    return super.start().map((value) => TemplateDefinition(value as List<ValidatedExpression>));
   }
 
   @override
@@ -264,7 +265,7 @@ T _returnValueOrExceptIfNotType<T>(value) {
   return value;
 }
 
-Parser<List<ValidatedExpression>> getParser() {
+Parser<TemplateDefinition> getParser() {
   final definition = MustacheGrammerEvaluatorDefinition();
   return definition.build();
 }

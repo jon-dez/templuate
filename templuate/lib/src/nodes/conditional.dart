@@ -5,25 +5,21 @@ import '../expressions/arguments/nested_helper.dart';
 import '../expressions/common/helper_function.dart';
 import '../variables.dart';
 import 'evaluable.dart';
-import 'node.dart';
 
-class ConditionalNode extends EvaluableNode {
-  final Evaluable<List<WidgetTemplateNode>> truthyList;
-  final Evaluable<List<WidgetTemplateNode>> falseyList;
+class ConditionalNode extends EvaluableNodeOfEvaluableNodeList {
+  final Evaluable<List<EvaluableNode>> truthyList;
+  final Evaluable<List<EvaluableNode>> falseyList;
 
   /// TODO: This should be [Evaluable] of bool instead of [LayoutConditionStatement] to allow for custom nested helpers.
   final LayoutConditionStatement statement;
   const ConditionalNode({
     required this.statement,
-    this.truthyList = const WidgetTemplateNodeListConstant([]),
-    this.falseyList = const WidgetTemplateNodeListConstant([]),
+    this.truthyList = const EvaluableNodeListConstant([]),
+    this.falseyList = const EvaluableNodeListConstant([]),
   });
 
   @override
-  EvaluableNodeList get nodeList => truthyList;
-
-  @override
-  List<WidgetTemplateNode> eval(WidgetTemplateVariablesContext context) {
+  List<EvaluableNode> eval(WidgetTemplateVariablesContext context) {
     final data = statement.varRef.eval(context);
     switch (statement.condition) {
       case LayoutCondition.hasElement:
@@ -31,7 +27,7 @@ class ConditionalNode extends EvaluableNode {
         if(data is! Iterable || data.isEmpty) {
           return evaluateAll(falseyList.eval(context), context);
         }
-        return evaluateNodeList(context);
+        return evaluateAll(truthyList.eval(context), context);
       default:
         throw UnimplementedError('$LayoutCondition type $statement not implemented.');
     }

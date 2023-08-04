@@ -37,6 +37,9 @@ class LayoutLiteral<T> implements EvaluableArgument<T> {
   BracketArgument toBracketArgument() {
     return LiteralArg.from(value);
   }
+  
+  @override
+  Type get evaluatedType => T;
 }
 
 /// A variable that depends on data used within a layout.
@@ -62,6 +65,9 @@ class LayoutVariableRef<T> implements EvaluableArgument<T> {
   BracketArgument toBracketArgument() {
     return IdentifierArg(selector.toString());
   }
+  
+  @override
+  Type get evaluatedType => T;
 }
 
 abstract class VariableSelector {

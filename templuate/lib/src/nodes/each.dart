@@ -1,12 +1,12 @@
+import 'package:templuate/src/nodes/helpers.dart';
+
 import '../variables.dart';
 import 'context_change.dart';
 import 'evaluable.dart';
-import 'node.dart';
 
 class EachNode<Data> extends EvaluableNode {
   final LayoutVariableRef iterableRef;
-  @override
-  final EvaluableNodeList nodeList;
+  final Evaluable<List<EvaluableNode>> nodeList;
   
   const EachNode({
     required this.iterableRef,
@@ -14,11 +14,11 @@ class EachNode<Data> extends EvaluableNode {
   });
 
   @override
-  List<WidgetTemplateNode> eval(WidgetTemplateVariablesContext context) {
+  List<EvaluableNode> eval(WidgetTemplateVariablesContext context) {
     final iterable = iterableRef.eval(context);
     return iterable is! Iterable
       ? throw Exception('There is no iterable at ${iterableRef.toString()}')
-      : List.from(Iterable.castFrom(iterable).map<WidgetTemplateNode>((e) {
+      : List.from(Iterable.castFrom(iterable).map<EvaluableNode>((e) {
           return EachIteration(
             data: e,
             nodeList: nodeList
@@ -31,8 +31,7 @@ class EachNode<Data> extends EvaluableNode {
 class EachIteration<Index, Data> extends EvaluableNode {
   // final Index index;
   final Data data;
-  @override
-  final EvaluableNodeList nodeList;
+  final Evaluable<List<EvaluableNode>> nodeList;
 
   const EachIteration({
     // required this.index,
@@ -42,8 +41,8 @@ class EachIteration<Index, Data> extends EvaluableNode {
   
   /// TODO: implement modifyContext by allowing [index] to be passed to the new context.
   @override
-  List<WidgetTemplateNode> eval(WidgetTemplateVariablesContext context) {
-    return evaluateNodeList(context).map(
+  List<EvaluableNode> eval(WidgetTemplateVariablesContext context) {
+    return evaluateAll(nodeList.eval(context), context).map(
       (e) => ContextChangeNode(
         data: data,
         content: e
