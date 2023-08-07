@@ -1,40 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:templuate/src/expressions/bracket_arguments/identifier_args/helper_function_or_variable.dart';
 import 'package:templuate/src/expressions/expression.dart';
 import 'package:templuate/src/expressions/text.dart';
 import 'package:petitparser/petitparser.dart';
+import 'package:templuate/src/variables.dart';
 
-import 'expressions/arguments/bracket_argument.dart';
-import 'expressions/arguments/identifier.dart';
-import 'expressions/arguments/literal.dart';
-import 'expressions/arguments/nested_helper.dart';
+import '../helper_function.dart';
+import 'expressions/bracket_arguments/identifier.dart';
+import 'expressions/bracket_arguments/identifier_args/path_identifier_arg.dart';
+import 'expressions/bracket_arguments/literal.dart';
 import 'expressions/block.dart';
-import 'expressions/common/helper_function.dart';
 import 'expressions/inlines.dart';
 import 'grammer/mustache_grammer_definition.dart';
 import 'template/template_definition.dart';
-
-class HelperFunctionOrVariable {
-  final IdentifierArg identifierArg;
-  const HelperFunctionOrVariable(this.identifierArg);
-
-  HelperFunction asFunction() => HelperFunction(identifierArg.identifier, args: []);
-
-  String get identifier => identifierArg.identifier;
-}
-
-class VariableIdentifier {
-  final IdentifierArg identifierArg;
-  const VariableIdentifier(this.identifierArg);
-}
-
-class InlineHelperOrVariable extends InlineBracket {
-  final HelperFunctionOrVariable helperFunctionOrVariable;
-  const InlineHelperOrVariable(this.helperFunctionOrVariable);
-  
-  @override
-  // TODO: implement content
-  String get content => helperFunctionOrVariable.identifierArg.value;
-}
 
 class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
 
@@ -57,19 +35,10 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
   Parser<InlineBracket> inline() {
     return super.inline().map((value) {
       final inlineContent = value[1];
-      if(inlineContent is HelperFunction) {
-        return InlineHelper(inlineContent);
+      if(inlineContent is ExpressionContent) {
+        return InlineBracket(inlineContent);
       }
-      if(inlineContent is LiteralArg) {
-        return InlineLiteral(inlineContent.literal);
-      }
-      if(inlineContent is VariableIdentifier) {
-        return InlineVariable(inlineContent.identifierArg);
-      }
-      if(inlineContent is HelperFunctionOrVariable) {
-        return InlineHelperOrVariable(inlineContent);
-      }
-      throw UnimplementedError('Inline expression of `${inlineContent.runtimeType}` is not expected');
+      throw UnimplementedError('Inline content type `${inlineContent.runtimeType}` is not expected');
     });
   }
 
@@ -170,39 +139,36 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
   }
 
   @override
-  Parser/*<BracketExpression>
-    /*BracketExpression is an expression that can be used between `{{` and `}}`*/
-  */
-    bracketContent()
+  Parser<ExpressionContent> expressionArgs()
   {
-    return super.bracketContent().map((value) {
-        final identifier = value[0] as IdentifierArg;
+    return super.expressionArgs().map((value) {
+        final identifierArg = value[0] as IdentifierArg;
         final helperArgs = value[1][1] as Map;
 
         if(helperArgs.isEmpty) {
-          if(identifier is PathIdentifierArg && !identifier.isAmbiguousIdentifier) {
+          if(identifierArg is PathIdentifierArg && !identifierArg.isAmbiguousIdentifier) {
             // TODO: If this part is reached when parsing a [BlockExpression], then it is invalid since a block cannot be a 
-            return VariableIdentifier(identifier);
+            return VariableRefExpressionContent(identifierArg);
           }
           /// The identifier arg could be for a variable or a helper function.
           /// We cannot know at this point since we do not know which helper
           /// functions are defined in the template linker. If no function
           /// is defined with the identifier, the template linker should assume
           /// it to be a variable type. 
-          return HelperFunctionOrVariable(identifier);
+          return HelperFunctionOrVariable(identifierArg.identifier);
         } else {
-          if(identifier is PathIdentifierArg) {
-            if(identifier.isAmbiguousIdentifier) {
+          if(identifierArg is PathIdentifierArg) {
+            if(identifierArg.isAmbiguousIdentifier) {
               // Same as the same return statement above...
-              return HelperFunctionOrVariable(identifier);
+              return HelperFunctionOrVariable(identifierArg.identifier);
             }
             throw Exception(
               'A path identifier that references a context path cannot have arguments.\n'
-              'Path identifier: $identifier'  
+              'Path identifier: $identifierArg'  
             );
           }
           return HelperFunction(
-            identifier.identifier,
+            identifierArg.identifier,
             /// helperArgs is not an empty map, but there is a chance it does not
             /// include both positional and named aruments.
             args: helperArgs['positional'] ?? [],
@@ -214,7 +180,7 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
 
   @override
   Parser<NestedHelperFnArg> nestedHelper() {
-    return super.nestedHelper().map((value) => NestedHelperFnArg(/**helper */ value[1]));
+    return super.nestedHelper().map((value) => NestedHelperFnArg(/**helper */ value));
   }
 
   @override
@@ -251,12 +217,14 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
       final fromParentPath = value[0] as bool;
       final paths = List<String>.from((value[1] as SeparatedList).elements);
       if(!fromParentPath && paths.length == 1) {
-        return IdentifierArg(paths[0]);
+        return HelperFunctionOrVariable(paths[0]);
       }
       return PathIdentifierArg(paths, fromParentPath: fromParentPath);
     });
   }
 }
+
+typedef VariableRefExpressionContent = EvaluableArgumentExpressionContent<LayoutVariableRef>;
 
 T _returnValueOrExceptIfNotType<T>(value) {
   if(value is! T) {

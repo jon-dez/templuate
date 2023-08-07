@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:templuate/src/nodes/helpers.dart';
 import 'package:templuate/templuate.dart';
 
+typedef WidgetTemplateNode<T extends Widget> = EvaluableNode<T>;
+typedef WidgetTemplateNodeList<T extends Widget> = EvaluableNodeOfEvaluableNodeList<T>;
 
 typedef TemplatedWidgetBuilder = TemplatedWidget Function(Map<String, dynamic> layoutData);
 
@@ -25,13 +27,4 @@ class TemplatedWidget extends StatelessWidget {
       children: widgets,
     );
   }
-}
-
-
-abstract class WidgetTemplateNode extends EvaluableNode<Widget> {
-  const WidgetTemplateNode();
-}
-
-abstract class WidgetTemplateNodeList extends EvaluableNodeOfEvaluableNodeList<Widget> {
-  const WidgetTemplateNodeList();
 }

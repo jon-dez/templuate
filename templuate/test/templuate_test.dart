@@ -5,12 +5,27 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:templuate/src/expressions/bracket_arguments/identifier_args/helper_function_or_variable.dart';
+import 'package:templuate/src/expressions/bracket_expression.dart';
+import 'package:templuate/src/expressions/expression.dart';
 
 import 'package:templuate/templuate.dart';
 
 import 'package:petitparser/debug.dart';
 
+TypeMatcher<B> isBracketExpression<B extends BracketExpression>() {
+  return isA<B>();
+}
+
+TypeMatcher<B> isBracketExpressionWithContent<B extends BracketExpression, E extends ExpressionContent>(
+  [TypeMatcher<E> Function(TypeMatcher<E> contentMatcher)? contentMatcher]
+) {
+  return isA<B>().having((p0) => p0.content,
+    'content', contentMatcher == null ? isA<E>() : contentMatcher(isA())
+  );
+}
 
 void main() {
   group('Parse', () {
@@ -60,13 +75,17 @@ void main() {
     group('Identifiers', () {
       // final parser = trace(getParser());
       final parser = getParser();
+      final isAnInlineVariable = isBracketExpressionWithContent<InlineBracket, VariableRefExpressionContent>();
+      final isAnInlineHelper = isBracketExpressionWithContent<InlineBracket, HelperFunction>();
+      const isAnInlineHelperMatching = isBracketExpressionWithContent<InlineBracket, HelperFunction>;
+      final isAnInlineHelperOrVariable = isBracketExpressionWithContent<InlineBracket, HelperFunctionOrVariable>();
       test('Inline parent variable', () {
         //
         final parsed = parser.parse('{{ ../foo}}').value;
         final expressions = parsed.validatedExpressions;
         final expression0 = expressions[0];
         print(expression0.expression);
-        expect(expression0, isA<InlineVariable>());
+        expect(expression0, isAnInlineVariable);
       });
 
       test('Inline current context variable', () {
@@ -75,7 +94,7 @@ void main() {
         final expressions = parsed.validatedExpressions;
         final expression0 = expressions[0];
         print(expression0.expression);
-        expect(expression0, isA<InlineVariable>());
+        expect(expression0, isAnInlineVariable);
       });
 
       test('Nested helper current context variable', () {
@@ -84,9 +103,9 @@ void main() {
         final expressions = parsed.validatedExpressions;
         final expression0 = expressions[0];
         print(expression0.expression);
-        expect(expression0, isA<InlineHelper>());
-        expression0 as InlineHelper;
-        expression0.function.args.first as NestedHelperFnArg;
+        expect(expression0, isAnInlineHelperMatching((contentMatcher) => contentMatcher.having(
+          (p0) => p0.args.firstOrNull, 'arg[0]', isA<NestedHelperFnArg>()
+        ),));
       });
 
       test('Inline variable', () {
@@ -97,15 +116,15 @@ void main() {
         final expression1 = expressions[1];
         print(expression0.expression);
         print(expression1.expression);
-        expect(expression0, isA<InlineVariable>());
-        expect(expression1, isA<InlineVariable>());
+        expect(expression0, isAnInlineVariable);
+        expect(expression1, isAnInlineVariable);
       });
       test('Inline helper', () {
         // Contains an argument `bar`, so it must be an inline helper.
         final parsed = parser.parse('{{ foo bar }}').value;
         final expressions = parsed.validatedExpressions;
         final expression = expressions[0];
-        expect(expression, isA<InlineHelper>());
+        expect(expression, isAnInlineHelper);
       });
       test('Inline helper or variable', () {
         /// The identifiers infer an ambiguous bracket expression;
@@ -115,9 +134,9 @@ void main() {
         final expression0 = expressions[0];
         final expression1 = expressions[1];
         print(expression0.expression);
-        expect(expression0, isA<InlineHelperOrVariable>());
+        expect(expression0, isAnInlineHelperOrVariable);
         print(expression1.expression);
-        expect(expression1, isA<InlineHelperOrVariable>());
+        expect(expression1, isAnInlineHelperOrVariable);
       });
       group('Inline literals', () {
         // TODO
@@ -129,7 +148,7 @@ void main() {
         test('each', () {
           final parser = getParser();
           final template = parser.parse('{{void (each test (debugPrint .))}}').value;
-          final compiled = WidgetTemplateCompiler().linkTemplateDefinition(template);
+          final compiled = TemplateLinker().linkTemplateDefinition(template);
           compiled({
             'test': ['test0', 'test1', 'test2']
           });
@@ -137,4 +156,37 @@ void main() {
       });
     });
   });
+
+  group('link', () {
+    final linker = TemplateLinker();
+    linker.addHelper(TestHelper());
+    linker.addNestedHelper('testNested', (args) {
+      return (ctx) {
+        return 'test1234';
+      };
+    });
+
+    final parser = getParser();
+    group('literals', () { });
+
+    group('variables', () { });
+
+    group('helpers', () {
+      test('nested helper', () {
+        final res = parser.parse('{{test (testNested "hello")}}').value;
+        linker.linkTemplateDefinition(res);
+      });
+    });
+  });
+}
+
+class TestHelper extends WidgetInlineHelper<String> {
+  TestHelper(): super('test',
+    (x) => Text(x)
+  );
+
+  @override
+  Evaluable<String> create(HelperParameters arguments) {
+    return arguments.positional(0).asBoundNestedHelperFnArg<String>();
+  }
 }

@@ -1,8 +1,11 @@
-import 'bracket_argument.dart';
+import 'package:templuate/src/variables.dart';
 
-abstract class LiteralArg<T> extends BracketArgument {
-  T get literal;
-  const LiteralArg();
+import '../evaluable.dart';
+
+abstract class LiteralArg<T> implements EvaluableArgument<T> {
+  final T literal;
+
+  const LiteralArg(this.literal);
 
   static LiteralArg<T> from<T>(T value) {
     getLiteralArg() {
@@ -18,34 +21,29 @@ abstract class LiteralArg<T> extends BracketArgument {
     }
     return getLiteralArg() as LiteralArg<T>;
   }
+
+  @override
+  T eval(WidgetTemplateVariablesContext context) => literal;
+
+  Evaluable<String> toEvaluableString() => StringArg(literal.toString());
 }
 
 class StringArg extends LiteralArg<String> {
-  final String string;
-  const StringArg(this.string);
+  const StringArg(super.literal);
 
   @override
-  String get value => '"$string"';
-  
-  @override
-  String get literal => string;
+  String get argString => '"$literal"';
 }
 
 class BooleanArg extends LiteralArg<bool> {
-  final bool boolean;
-  const BooleanArg(this.boolean);
+  const BooleanArg(super.literal);
 
   @override
-  String get value => '$boolean';
-
-  @override
-  bool get literal => boolean;
+  String get argString => '$literal';
 }
 
-abstract class NumberArg<T extends num> extends LiteralArg<T> {
-  T get number;
-
-  const NumberArg();
+class NumberArg<T extends num> extends LiteralArg<T> {
+  const NumberArg(super.literal);
 
   static NumberArg fromString(String numberString) {
     final number = num.parse(numberString);
@@ -60,22 +58,8 @@ abstract class NumberArg<T extends num> extends LiteralArg<T> {
   }
 
   @override
-  String get value => '$number';
-
-  @override
-  T get literal => number;
+  String get argString => '$literal';
 }
 
-class IntArg extends NumberArg<int> {
-  @override
-  final int number;
-
-  const IntArg(this.number);
-}
-
-class DoubleArg extends NumberArg<double> {
-  @override
-  final double number;
-
-  const DoubleArg(this.number);
-}
+typedef IntArg = NumberArg<int>;
+typedef DoubleArg = NumberArg<double>;

@@ -23,7 +23,7 @@ class HelperParametersGenerator extends GeneratorForAnnotation<HelperArgs> {
       // capitalize(String str) => str[0].toUpperCase() + str.substring(1);
       final namedArgs = unnamedConstructor.namedArgs;
 
-      buffer.writeln('class $genClassName extends Evaluable<$className> {');
+      buffer.writeln('class $genClassName implements Evaluable<$className> {');
       
       
       genClassFields(buffer, posArgs, namedArgs);

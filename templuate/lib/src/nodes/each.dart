@@ -2,9 +2,9 @@ import 'package:templuate/src/nodes/helpers.dart';
 
 import '../variables.dart';
 import 'context_change.dart';
-import 'evaluable.dart';
+import '../expressions/evaluable.dart';
 
-class EachNode<Data> extends EvaluableNode {
+class EachNode<Data> implements EvaluableNode {
   final LayoutVariableRef iterableRef;
   final Evaluable<List<EvaluableNode>> nodeList;
   
@@ -28,7 +28,7 @@ class EachNode<Data> extends EvaluableNode {
 }
 
 
-class EachIteration<Index, Data> extends EvaluableNode {
+class EachIteration<Index, Data> implements EvaluableNode {
   // final Index index;
   final Data data;
   final Evaluable<List<EvaluableNode>> nodeList;

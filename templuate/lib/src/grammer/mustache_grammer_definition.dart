@@ -21,7 +21,7 @@ class MustacheGrammerDefinition extends GrammarDefinition {
       (ref0(open).not() & ref0(close).not() & any()).plus().flatten();
 
   Parser inline() =>
-      (ref0(open) & (ref0(bracketContent) | ref0(value)).trim() & ref0(close));
+      (ref0(open) & (ref0(expressionArgs) | ref0(value)).trim() & ref0(close));
 
   /// Parse the positional and named arguments.
   ///
@@ -37,8 +37,8 @@ class MustacheGrammerDefinition extends GrammarDefinition {
 
   Parser positionalArg() => ref0(value) | ref0(nestedHelper);
 
-  Parser bracketContent() => (ref0(identifier).trim() & ref0(args).optional());
-  Parser nestedHelper() => (char('(') & ref0(bracketContent) & char(')'));
+  Parser expressionArgs() => (ref0(identifier).trim() & ref0(args).optional());
+  Parser nestedHelper() => ref0(expressionArgs).skip(before: char('('), after: char(')'));
 
   Parser value() => ref0(literalValue) | ref0(identifier);
   Parser name() => ref0(_namePattern).flatten();
@@ -54,7 +54,7 @@ class MustacheGrammerDefinition extends GrammarDefinition {
   Parser numLiteral() => digit().plus().flatten();
 
   Parser block() => (string('{{#') &
-      ref0(bracketContent) &
+      ref0(expressionArgs) &
       ref0(close) &
       ref0(mustache) &
       string('{{/') &

@@ -1,6 +1,9 @@
-import 'arguments/bracket_argument.dart';
+import 'package:templuate/src/expressions/brackets/close_bracket.dart';
+import 'package:templuate/src/expressions/brackets/open_bracket.dart';
+
+import 'bracket_argument.dart';
 import 'common/helper_function.dart';
-import 'brackets.dart';
+import 'bracket_expression.dart';
 import 'expression.dart';
 
 class BlockExpression implements ValidatedExpression {
@@ -21,9 +24,9 @@ class BlockExpression implements ValidatedExpression {
     return '$function\n${children.map((e) => e.toString()).join(' ')}';
   }
 
-  OpenBracket get open => OpenBracket(function);
+  BracketExpression get open => BracketExpression(OpenBracketArgs(function));
 
-  CloseBracket get close => CloseBracket(function.name);
+  BracketExpression get close => BracketExpression(CloseBracketArgs(function.name));
   
   @override
   String get expression => '${open.expression}${children.map((e) => e.expression).join()}${close.expression}';

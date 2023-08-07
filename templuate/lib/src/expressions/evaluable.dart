@@ -1,18 +1,12 @@
-import 'package:templuate/src/expressions/arguments/bracket_argument.dart';
+import 'package:templuate/src/expressions/bracket_argument.dart';
 import 'package:templuate/src/nodes/node.dart';
 
 import '../variables.dart';
 
-/// An object that can be evaluated into [T] by using [WidgetTemplateVariablesContext].
-/// 
-/// [evaluatedType] is what the node represents when it is evaluated.
-abstract class Evaluable<T> {
-  const Evaluable();
-  
-  T eval(WidgetTemplateVariablesContext context);
 
-  /// TODO: Evaluate whether this is needed... no pun intended.
-  Type get evaluatedType => T;
+/// An object that can be evaluated into [T] by using [WidgetTemplateVariablesContext].
+abstract class Evaluable<T> {  
+  T eval(WidgetTemplateVariablesContext context);
 }
 
 typedef EvaluableOfEvaluableNodeList = Evaluable<List<Evaluable>>;
@@ -23,22 +17,15 @@ typedef EvaluableOfEvaluableNodeList = Evaluable<List<Evaluable>>;
 /// Can be evaluated to return a [T] at template run time.
 /// 
 /// e.g. a block helper, inline helper, inline variable, free text, etc.
-abstract class EvaluableNode<T> extends Evaluable<T> implements TemplateNode {
-  const EvaluableNode();
-
-  @override
-  Type get enclosedType => Evaluable<T>;
-}
+abstract class EvaluableNode<T> implements Evaluable<T>, TemplateNode {}
 
 /// An [EvaluableNode] that evaluates to a list containing elements of [EvaluableNode]<[T]>.
 typedef EvaluableNodeOfEvaluableNodeList<T> = EvaluableNode<List<EvaluableNode<T>>>;
 
-abstract class EvaluableArgument<T> extends Evaluable<T> implements BracketArgumentConvertable {
-  const EvaluableArgument();
-}
+abstract class EvaluableArgument<T> implements Evaluable<T>, BracketArgument {}
 
 /// Layout a constant list of widget templates
-class EvaluableNodeListConstant extends EvaluableNodeOfEvaluableNodeList {
+class EvaluableNodeListConstant implements EvaluableNodeOfEvaluableNodeList {
   final List<EvaluableNode> templateNodes;
   const EvaluableNodeListConstant(this.templateNodes);
   

@@ -1,7 +1,10 @@
-import '../arguments/bracket_argument.dart';
-import '../arguments/identifier.dart';
+import 'package:templuate/src/expressions/expression.dart';
 
-class HelperFunction {
+import '../bracket_argument.dart';
+
+/// TODO: Rename [HelperFunction] to [HelperFunctionCall]
+/// - Rationale: This represents an invocation to a helper function.
+class HelperFunction implements ExpressionContent {
   final String name;
   final List<BracketArgument> args;
   final Map<String, BracketArgument> namedArgs;
@@ -11,16 +14,10 @@ class HelperFunction {
     this.namedArgs = const {},
   });
 
-  /// [args] must not be empty.
-  factory HelperFunction.fromBracketArgs(List<BracketArgument> args) {
-    final nestedArgsIdentifier = expectHelperIdentifier(args[0], 'helper function');
-    return HelperFunction(nestedArgsIdentifier.identifier, args: args.sublist(1));
-  }
-
   @override
   String toString() {
-    final positionalArgsString = args.map((e) => e.value).join(' ');
-    final namedArgsString = namedArgs.entries.map((e) => '${e.key}=${e.value.value}').join(' ');
+    final positionalArgsString = args.map((e) => e.argString).join(' ');
+    final namedArgsString = namedArgs.entries.map((e) => '${e.key}=${e.value.argString}').join(' ');
     return [
       name,
       if(positionalArgsString.isNotEmpty)
@@ -29,15 +26,7 @@ class HelperFunction {
         namedArgsString
     ].join(' ');
   }
-}
-
-
-IdentifierArg expectHelperIdentifier(BracketArgument bracketArgument, String errorHelper) {
-  if (bracketArgument is! IdentifierArg) {
-    throw Exception('The $errorHelper must start with an identifier. Got ${bracketArgument.runtimeType}');
-  }
-  if (bracketArgument.identifier.contains('.')) {
-    throw Exception('The $errorHelper identifier cannot be a variable identifier.');
-  }
-  return bracketArgument;
+  
+  @override
+  String get content => toString();
 }
