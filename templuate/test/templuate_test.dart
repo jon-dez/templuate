@@ -10,6 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:templuate/src/expressions/bracket_arguments/identifier_args/helper_function_or_variable.dart';
 import 'package:templuate/src/expressions/bracket_expression.dart';
 import 'package:templuate/src/expressions/expression.dart';
+import 'package:templuate/src/nodes/evaluable_node.dart';
+import 'package:templuate/src/nodes/text.dart';
+import 'package:templuate/src/templated_text_linker.dart';
+import 'package:templuate/src/templated_widget_linker.dart';
 
 import 'package:templuate/templuate.dart';
 
@@ -148,7 +152,7 @@ void main() {
         test('each', () {
           final parser = getParser();
           final template = parser.parse('{{void (each test (debugPrint .))}}').value;
-          final compiled = TemplateLinker().linkTemplateDefinition(template);
+          final compiled = TemplateLinker().linkWidgetBuilder(template);
           compiled({
             'test': ['test0', 'test1', 'test2']
           });
@@ -174,7 +178,25 @@ void main() {
     group('helpers', () {
       test('nested helper', () {
         final res = parser.parse('{{test (testNested "hello")}}').value;
-        linker.linkTemplateDefinition(res);
+        linker.linkWidgetBuilder(res);
+      });
+    });
+  });
+
+  group('Built-in linkers', () {
+    final parser = getParser();
+    parseTemplate(String template) => parser.parse(template).value;
+    final linker = TemplateLinker();
+    linker.addHelper(ReturnBarHelper());
+    group('Templated text', () {
+      test('One $FreeTextNode', () {
+        const templateString = 'Foo{{returnBar "Bar"}}';
+        final expectedString = 'FooBar';
+        final res = parseTemplate(templateString);
+        final textBuilder = linker.linkTextBuilder(res);
+        expect(textBuilder(WidgetTemplateVariablesContext({
+          'returnBar': true
+        })), '$expectedString');
       });
     });
   });
@@ -188,5 +210,16 @@ class TestHelper extends WidgetInlineHelper<String> {
   @override
   Evaluable<String> create(HelperParameters arguments) {
     return arguments.positional(0).asBoundNestedHelperFnArg<String>();
+  }
+}
+
+class ReturnBarHelper extends TemplateHelper<String> {
+  @override
+  // TODO: implement name
+  String get name => 'returnBar';
+
+  @override
+  EvaluableNode<String> useArgs(HelperParameters arguments, NodeContentEvaluator contentEvaluator) {
+    return EvaluableToNode(LiteralArg.from('Bar'));
   }
 }

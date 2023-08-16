@@ -33,12 +33,23 @@ abstract class WidgetHelperNode<T> implements WidgetTemplateNode {
   WidgetBuilderHelperFn get widgetBuilder;
 }
 
-abstract class WidgetHelper<T extends WidgetHelperNode> {
+abstract class TemplateHelper<T> {
+  String get name;
+
+  EvaluableNode<T> useArgs(HelperParameters arguments, NodeContentEvaluator contentEvaluator);
+}
+
+typedef TemplateBlockHelper<T> = TemplateHelper<List<EvaluableNode<T>>>;
+typedef TemplateInlineHelper<T> = TemplateHelper<T>;
+
+abstract class WidgetHelper<T extends WidgetHelperNode> implements TemplateHelper<Widget> {
+  @override
   final String name;
 
   const WidgetHelper(this.name);
 
-  T useArgs(HelperParameters arguments, NodeContentEvaluator contentEvaluator);
+  @override
+  useArgs(HelperParameters arguments, NodeContentEvaluator contentEvaluator);
 }
 
 typedef X = WidgetBuilderHelperFn Function(
@@ -173,8 +184,8 @@ class TemplateLinker {
   final _customHelpers = <String, CustomHelperFn>{};
   final _customNestedHelpers = <String, NestedHelper>{};
 
-  void addHelper<T extends WidgetHelperNode>(
-    WidgetHelper<T> widgetHelper
+  void addHelper<T>(
+    TemplateHelper<T> widgetHelper
   ) {
     _customHelpers[widgetHelper.name] = (args, children) {
       return widgetHelper.useArgs(
@@ -188,17 +199,8 @@ class TemplateLinker {
     _customNestedHelpers[name] = NestedHelper<T>(nestedHelperFn);
   }
 
-  /// Filters out all linked [TemplateNode]s that do not have [TemplateNode.enclosedType] of [Widget].
-  TemplatedWidgetBuilder linkTemplateDefinition(TemplateDefinition templateDefinition) {
-    final linkedTemplate = link(templateDefinition.validatedExpressions);
-    debugPrint('Linked template successfully: $templateDefinition');
-    return (templateData) => TemplatedWidget(
-      layoutData: templateData, templateNodes: linkedTemplate.whereType<WidgetTemplateNode>().toList()
-    );
-  }
-
-  /// Links each [TemplateNode] to an appropriate [EvaluableNode].
-  List<TemplateNode> link(
+  /// Links each [ValidatedExpression] to an appropriate [TemplateNode].
+  List<TemplateNode> link<T>(
       List<ValidatedExpression> validatedExpressions) {
     var nodes = <TemplateNode>[];
     for (var expression in validatedExpressions) {
@@ -214,21 +216,21 @@ class TemplateLinker {
             continue;
           }
         } else if (content is HelperFunction) {
-          nodes.add(_bindHelperOrThrow(content, children: [], templateCompiler: this));
+          nodes.add(_bindHelperOrThrow<T>(content, children: [], templateCompiler: this));
           continue;
         } else if (content is HelperFunctionOrVariable) {
           if(content.identifier == 'else') {
             nodes.add(ElseNode());
             continue;
           } else {
-            nodes.add(_bindHelperFunctionOrFallbackToVariable(content));
+            nodes.add(_bindHelperFunctionOrFallbackToVariable<T>(content));
             continue;
           }
         }
         throw UnimplementedError(
             '$InlineBracket.content ${content.runtimeType} is not supported.');
       } else if (expression is BlockExpression) {
-        nodes.add(_bindHelperOrThrow(expression.function, children: expression.children, templateCompiler: this));
+        nodes.add(_bindHelperOrThrow<T>(expression.function, children: expression.children, templateCompiler: this));
         continue;
       } else if (expression is TextExpression) {
         nodes.add(FreeTextNode(LiteralArg.from(expression.text)));
@@ -240,23 +242,24 @@ class TemplateLinker {
     return nodes;
   }
 
-  EvaluableNode _bindHelperFunctionOrFallbackToVariable(HelperFunctionOrVariable functionOrVariable) {
-    return bindHelper(functionOrVariable.asFunction(), children: [], templateCompiler: this)
-      ?? EvaluableToNode(functionOrVariable.asVariableRef())
+  EvaluableNode _bindHelperFunctionOrFallbackToVariable<T>(HelperFunctionOrVariable functionOrVariable) {
+    return bindHelper<T>(functionOrVariable.asFunction(), children: [], templateCompiler: this)
+      ?? EvaluableToNode<T>(functionOrVariable.asVariableRef())
     ;
   }
 
-  EvaluableNode _bindHelperOrThrow(HelperFunction function, {
+  EvaluableNode _bindHelperOrThrow<T>(HelperFunction function, {
     required List<ValidatedExpression> children,
     required TemplateLinker templateCompiler
   }) {
-    final helper = bindHelper(function, children: children, templateCompiler: templateCompiler);
+    final helper = bindHelper<T>(function, children: children, templateCompiler: templateCompiler);
     if (helper == null) {
       throw Exception('The custom helper `${function.name}` was not found.');
     }
     return helper;
   }
 
+  /// TODO: Check the helper type
   CustomHelperFn? findCustomHelper(String identifier) => _customHelpers[identifier];
 
   NestedHelper<T>? findCustomNestedHelperOrNull<T>(String identifier) {
