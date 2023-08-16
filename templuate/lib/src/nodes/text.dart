@@ -11,7 +11,6 @@ class EvaluableToString implements Evaluable<String> {
   }
 }
 
-/// TODO: Perhaps rename [FreeTextNode] to [FreeTextNode], and extend from [EvaluableNode]<[String]> instead in order to remove dependency from widgets.
 class FreeTextNode implements EvaluableNode<String> {
   final Evaluable<String> text;
   const FreeTextNode(this.text);
