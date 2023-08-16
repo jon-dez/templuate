@@ -5,8 +5,6 @@ import 'package:templuate/templuate.dart';
 typedef WidgetTemplateNode<T extends Widget> = EvaluableNode<T>;
 typedef WidgetTemplateNodeList<T extends Widget> = EvaluableNodeOfEvaluableNodeList<T>;
 
-typedef TemplatedWidgetBuilder = TemplatedWidget Function(Map<String, dynamic> layoutData);
-
 class TemplatedWidget extends StatelessWidget {
   final Map<String, dynamic> layoutData;
   final List<WidgetTemplateNode> templateNodes;

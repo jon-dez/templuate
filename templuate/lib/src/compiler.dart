@@ -4,6 +4,7 @@ import 'package:templuate/src/nodes/evaluable_node.dart';
 import 'package:templuate/src/template/templated_widget.dart';
 import 'package:templuate/src/template/template_definition.dart';
 import 'package:templuate/src/nodes/helpers.dart';
+import 'package:templuate/src/templated_text_linker.dart';
 
 import 'expressions.dart';
 import 'expressions/bracket_arguments/identifier_args/helper_function_or_variable.dart';
@@ -15,6 +16,7 @@ import 'helpers.dart';
 import 'expressions/evaluable.dart';
 import 'nodes/node.dart';
 import 'nodes/text.dart';
+import 'templated_widget_linker.dart';
 import 'variables.dart';
 
 typedef CustomHelperFn<T> = EvaluableNode<T> Function(
@@ -197,6 +199,27 @@ class TemplateLinker {
 
   void addNestedHelper<T>(String name, CustomNestedHelperFn<T> nestedHelperFn) {
     _customNestedHelpers[name] = NestedHelper<T>(nestedHelperFn);
+  }
+
+  TemplatedStringBuilder linkTextBuilder(TemplateDefinition templateDefinition) {
+    final linkedTemplate = link<String>(templateDefinition.validatedExpressions).map((e) {
+      if(e is! EvaluableNode<String>) {
+        throw Exception('$e is not an `${EvaluableNode<String>}`.');
+      }
+      return e;
+    });
+    return (context) => linkedTemplate.toList().fold(StringBuffer(''),
+      (previousValue, element) => previousValue..write(element.eval(context))
+    ).toString();
+  }
+
+  /// Filters out all linked [TemplateNode]s that do not have [TemplateNode.enclosedType] of [Widget].
+  TemplatedWidgetBuilder linkWidgetBuilder(TemplateDefinition templateDefinition) {
+    final linkedTemplate = link(templateDefinition.validatedExpressions);
+    debugPrint('Linked template successfully: $templateDefinition');
+    return (templateData) => TemplatedWidget(
+      layoutData: templateData, templateNodes: linkedTemplate.whereType<WidgetTemplateNode>().toList()
+    );
   }
 
   /// Links each [ValidatedExpression] to an appropriate [TemplateNode].
