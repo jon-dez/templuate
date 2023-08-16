@@ -37,6 +37,8 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
       final inlineContent = value[1];
       if(inlineContent is ExpressionContent) {
         return InlineBracket(inlineContent);
+      } else if(inlineContent is LiteralArg) {
+        return InlineBracket(inlineContent.toExpressionContent());
       }
       throw UnimplementedError('Inline content type `${inlineContent.runtimeType}` is not expected');
     });

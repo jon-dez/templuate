@@ -1,6 +1,9 @@
 import 'package:templuate/src/variables.dart';
 
 import '../evaluable.dart';
+import '../inlines.dart';
+
+typedef LiteralExpressionContent<T> = EvaluableArgumentExpressionContent<LiteralArg<T>>;
 
 abstract class LiteralArg<T> implements EvaluableArgument<T> {
   final T literal;
@@ -26,6 +29,7 @@ abstract class LiteralArg<T> implements EvaluableArgument<T> {
   T eval(WidgetTemplateVariablesContext context) => literal;
 
   Evaluable<String> toEvaluableString() => StringArg(literal.toString());
+  LiteralExpressionContent<T> toExpressionContent() => LiteralExpressionContent<T>(this);
 }
 
 class StringArg extends LiteralArg<String> {
