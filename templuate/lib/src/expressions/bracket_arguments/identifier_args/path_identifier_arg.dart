@@ -89,7 +89,11 @@ class VariablePathSelector implements VariableSelector {
   get(context) {
     var curr = context.data;
     for (var seg in segments) {
-      curr = curr[seg];
+      final map = Map<String, dynamic>.from(curr);
+      if(!map.containsKey(seg)) {
+        throw Exception('`$this` selects an undefined variable. Consider defining `$variableRef`.');
+      }
+      curr = map[seg];
       if(curr == null) {
         return null;
       }
@@ -99,9 +103,11 @@ class VariablePathSelector implements VariableSelector {
 
   bool get isEmpty => segments.isEmpty;
 
+  String get variableRef => segments.join('.');
+
   @override
   String toString() {
     // return '$pathToken${segments.join(pathToken)}';
-    return '$VariablePathSelector: ${segments.join('.')}';
+    return '$VariablePathSelector: $variableRef';
   }
 }
