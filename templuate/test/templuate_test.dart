@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:templuate/src/expressions/bracket_arguments/identifier_args/helper_function_or_variable.dart';
 import 'package:templuate/src/expressions/bracket_expression.dart';
 import 'package:templuate/src/expressions/expression.dart';
-import 'package:templuate/src/nodes/evaluable_node.dart';
+import 'package:templuate/src/nodes/evaluable_as_node.dart';
 import 'package:templuate/src/nodes/text.dart';
 import 'package:templuate/src/templated_text_linker.dart';
 import 'package:templuate/src/templated_widget_linker.dart';
@@ -82,7 +82,7 @@ void main() {
       final isAnInlineVariable = isBracketExpressionWithContent<InlineBracket, VariableRefExpressionContent>();
       final isAnInlineHelper = isBracketExpressionWithContent<InlineBracket, HelperFunction>();
       const isAnInlineHelperMatching = isBracketExpressionWithContent<InlineBracket, HelperFunction>;
-      final isAnInlineHelperOrVariable = isBracketExpressionWithContent<InlineBracket, HelperFunctionOrVariable>();
+      final isAnInlineHelperOrVariable = isBracketExpressionWithContent<InlineBracket, HelperFunctionOrVariableRef>();
       test('Inline parent variable', () {
         //
         final parsed = parser.parse('{{ ../foo}}').value;
@@ -220,6 +220,6 @@ class ReturnBarHelper extends TemplateHelper<String> {
 
   @override
   EvaluableNode<String> useArgs(HelperParameters arguments, NodeContentEvaluator contentEvaluator) {
-    return EvaluableToNode(LiteralArg.from('Bar'));
+    return EvaluableAsNode(LiteralArg.from('Bar'));
   }
 }

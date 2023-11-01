@@ -5,17 +5,23 @@ import '../../common/helper_function.dart';
 import '../../expression.dart';
 import '../identifier.dart';
 
-class HelperFunctionOrVariable implements ExpressionContent, IdentifierArg {
+/// An [ExpressionContent] that is also an [IdentifierArg].
+///
+/// This is an ambiguous definition since a helper function that takes in no parameters and a variable reference can be identified by this definition.
+/// The only thing we can do is check if a helper function that is identified by [identifier] exists in the template linker,
+/// and if not we can consider it a reference to a variable in some context during runtime.
+///
+class HelperFunctionOrVariableRef implements ExpressionContent, IdentifierArg {
   @override
   final String identifier;
-  const HelperFunctionOrVariable(this.identifier);
+  const HelperFunctionOrVariableRef(this.identifier);
 
   HelperFunction asFunction() => HelperFunction(identifier, args: []);
   LayoutVariableRef<T> asVariableRef<T>() => PathIdentifierArg([identifier]);
-  
+
   @override
   String get content => identifier;
-  
+
   @override
   String get argString => identifier;
 }

@@ -69,7 +69,7 @@ class HelperParameter {
     } else if (argument is IdentifierArg) {
       if (argument is PathIdentifierArg) {
         return argument.cast();
-      } else if (argument is HelperFunctionOrVariable) {
+      } else if (argument is HelperFunctionOrVariableRef) {
         return NestedHelperFnArg(argument.asFunction()).tryBind<T>(_linker) as Evaluable<T>?
           ?? argument.asVariableRef<T>();
       }

@@ -63,7 +63,7 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
         final fn = value[1];
         if(fn is HelperFunction) {
           return fn;
-        } else if (fn is HelperFunctionOrVariable) {
+        } else if (fn is HelperFunctionOrVariableRef) {
           /// This conversion is fine as long we have determined the identifier
           /// for `fn` at an earlier point to be ambigous as a helper function and
           /// a variable. At this point we are just narrowing down the type it is
@@ -157,12 +157,12 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
           /// functions are defined in the template linker. If no function
           /// is defined with the identifier, the template linker should assume
           /// it to be a variable type. 
-          return HelperFunctionOrVariable(identifierArg.identifier);
+          return HelperFunctionOrVariableRef(identifierArg.identifier);
         } else {
           if(identifierArg is PathIdentifierArg) {
             if(identifierArg.isAmbiguousIdentifier) {
               // Same as the same return statement above...
-              return HelperFunctionOrVariable(identifierArg.identifier);
+              return HelperFunctionOrVariableRef(identifierArg.identifier);
             }
             throw Exception(
               'A path identifier that references a context path cannot have arguments.\n'
@@ -219,7 +219,7 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
       final fromParentPath = value[0] as bool;
       final paths = List<String>.from((value[1] as SeparatedList).elements);
       if(!fromParentPath && paths.length == 1) {
-        return HelperFunctionOrVariable(paths[0]);
+        return HelperFunctionOrVariableRef(paths[0]);
       }
       return PathIdentifierArg(paths, fromParentPath: fromParentPath);
     });
