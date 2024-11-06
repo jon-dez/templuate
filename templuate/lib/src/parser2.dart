@@ -148,21 +148,29 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
         final helperArgs = value[1][1] as Map;
 
         if(helperArgs.isEmpty) {
-          if(identifierArg is PathIdentifierArg && !identifierArg.isAmbiguousIdentifier) {
-            // TODO: If this part is reached when parsing a [BlockExpression], then it is invalid since a block cannot be a 
-            return VariableRefExpressionContent(identifierArg);
+          if(identifierArg is HelperFunctionOrVariableRef) return identifierArg;
+          if(identifierArg is PathIdentifierArg) {
+            if(!identifierArg.isAmbiguousIdentifier) {
+              // TODO: If this part is reached when parsing a [BlockExpression], then it is invalid since a block cannot be a 
+              return VariableRefExpressionContent(identifierArg);
+            } else {
+              /// The identifier arg could be for a variable or a helper function.
+              /// We cannot know at this point since we do not know which helper
+              /// functions are defined in the template linker. If no function
+              /// is defined with the identifier, the template linker should assume
+              /// it to be a variable type. 
+              return HelperFunctionOrVariableRef(identifierArg);
+            }
           }
-          /// The identifier arg could be for a variable or a helper function.
-          /// We cannot know at this point since we do not know which helper
-          /// functions are defined in the template linker. If no function
-          /// is defined with the identifier, the template linker should assume
-          /// it to be a variable type. 
-          return HelperFunctionOrVariableRef(identifierArg.identifier);
+          throw Exception(
+            'Unknown expressionArgs error: \n'
+            'Path identifier: $identifierArg'  
+          );
         } else {
           if(identifierArg is PathIdentifierArg) {
             if(identifierArg.isAmbiguousIdentifier) {
               // Same as the same return statement above...
-              return HelperFunctionOrVariableRef(identifierArg.identifier);
+              return HelperFunctionOrVariableRef(identifierArg);
             }
             throw Exception(
               'A path identifier that references a context path cannot have arguments.\n'
@@ -219,7 +227,7 @@ class MustacheGrammerEvaluatorDefinition extends MustacheGrammerDefinition {
       final fromParentPath = value[0] as bool;
       final paths = List<String>.from((value[1] as SeparatedList).elements);
       if(!fromParentPath && paths.length == 1) {
-        return HelperFunctionOrVariableRef(paths[0]);
+        return HelperFunctionOrVariableRef(PathIdentifierArg([paths[0]]));
       }
       return PathIdentifierArg(paths, fromParentPath: fromParentPath);
     });

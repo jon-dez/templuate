@@ -12,12 +12,14 @@ import '../identifier.dart';
 /// and if not we can consider it a reference to a variable in some context during runtime.
 ///
 class HelperFunctionOrVariableRef implements ExpressionContent, IdentifierArg {
-  @override
-  final String identifier;
-  const HelperFunctionOrVariableRef(this.identifier);
+  final PathIdentifierArg pathIdentifierArg;
+  const HelperFunctionOrVariableRef(this.pathIdentifierArg);
 
   HelperFunction asFunction() => HelperFunction(identifier, args: []);
-  LayoutVariableRef<T> asVariableRef<T>() => PathIdentifierArg([identifier]);
+  LayoutVariableRef<T> asVariableRef<T>() => pathIdentifierArg.cast();
+  
+  @override
+  String get identifier => pathIdentifierArg.identifier;
 
   @override
   String get content => identifier;

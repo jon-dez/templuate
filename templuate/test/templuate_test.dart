@@ -92,6 +92,18 @@ void main() {
         expect(expression0, isAnInlineVariable);
       });
 
+      test('Inline identifier paths', () {
+        //
+        final parsed = parser.parse('{{ foo.bar }}').value;
+        final expressions = parsed.validatedExpressions;
+        final expression0 = expressions[0];
+        print(expression0.expression);
+        expect(expression0, isAnInlineHelperOrVariable);
+        expect(((expression0 as BracketExpression).content as HelperFunctionOrVariableRef).pathIdentifierArg.paths,
+          ['foo', 'bar']
+        );
+      });
+
       test('Inline current context variable', () {
         //
         final parsed = parser.parse('{{.}}').value;

@@ -88,7 +88,7 @@ abstract class WidgetBlockHelper<T, U>
 }
 
 typedef RenderContentFn = List<Widget> Function(
-    WidgetTemplateVariablesContext<dynamic> variablesContext);
+    WidgetTemplateVariablesContext variablesContext);
 
 abstract class WidgetBlockHelperWithChildren<T>
     extends WidgetBlockHelper<T, RenderContentFn> {
@@ -224,13 +224,16 @@ class TemplateLinker {
       }
       return e;
     });
-    return (context) => linkedTemplate
+    return (context) {
+      final stringifiedVariablesContext = context.stringifiedContext();
+      return linkedTemplate
         .toList()
         .fold(
             StringBuffer(''),
             (previousValue, element) =>
-                previousValue..write(element.eval(context)))
+                previousValue..write(element.eval(stringifiedVariablesContext)))
         .toString();
+    };
   }
 
   /// Filters out all linked [TemplateNode]s that do not have [TemplateNode.enclosedType] of [Widget].
